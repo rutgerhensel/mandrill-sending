@@ -1,148 +1,61 @@
-<?php
+<?php namespace Mailer;
+	
+use Mailer\DB\DB;
+use Mailer\Configurable;
 
-require_once dirname(__FILE__) . '/vendor/autoload.php';
-
-class Mandrill_Mailer {
-
-	private $configs;
-	private $errors;
+class Mailer extends Configurable
+{
+	protected $recipients;
 	
-	private $recipients;
+	protected $subject;
 	
-	private $subject;
+	private $instance;
 	
-	private $attachments;
+	protected $attachments = array();
 	
-	public function __construct($configs = array())
+	protected $errors = array();
+	
+	private function __construct($configs = array())
 	{
-		# lets set some defaults, they will be overridden if in $configs array
-		$this->setConfig('pretend', false);
+		$defaults = require(dirname(__FILE__) . '/../config/config.php');
 		
+		$this->setConfigs($defaults);
+		
+		#override any configuration
 		$this->setConfigs($configs);
-		$this->errors = array();
-		$this->attachments = array();
 	}
 	
-	public static function instance($configs = null)
+	public static function instance($configs = array())
 	{
 		return new static($configs);
 	}
 	
-	public function sendHtml($body, $send_now = false)
+	private function getServiceInstance($service_name)
 	{
-		# add the unsubscribe link
-		if($this->getConfig('include_unsubscribe_link', false) === true)
+		$services_path = dirname(__FILE__) . "/services";
+		$service_namepace = $this->camelCase($service_name);
+		$configuration = $this->getConfig($service_name, array());
+		
+		if(! is_dir("{$services_path}/{$service_name}/"))
 		{
-			$body .= $this->getConfig('unsubscribe_link', '');
+			throw new \Exception("Mailer '{$service_name}' does not exist.");
 		}
 		
-		$message = array(
-			'html' => $body,
-			'subject' => $this->subject,
-			'from_name' => $this->getConfig('from_name', ''),
-			'from_email' => $this->getConfig('from_email', ''),
-			'to' => $this->getRecipients()
-		);
+		require_once("{$services_path}/{$service_name}/Mailer.php");
 		
-		$message = $this->addAttachments($message);
-		$message = $this->addSubAccount($message);
+		$class = "Mailer\Services\\{$service_namepace}\\Mailer";
 		
-		if($send_now)
+		if( ! class_exists($class))
 		{
-			try
-			{
-				$mandrill = new Mandrill($this->getConfig('api_key'));
-				
-				return $mandrill->messages->send($message);
-			}
-			catch(Exception $e)
-			{
-				// Mandrill errors are thrown as exceptions
-				$this->errors[] = 'A mandrill error occurred: ' . get_class($e) . ' - ' . $e->getMessage();
-				
-				return $this->sendBackup($body);
-			}
+			throw new \Exception("Class '$class' does not exist.");
 		}
 		
-		return $this->scheduleSending($this->getRecipients(), $this->subject, $message);
+		return new $class($configuration);
 	}
 	
-	public function sendTemplate($template_slug, $variables = array(), $send_now = false)
+	private function getDBConnection()
 	{
-		#convert $variables array into the weird format required by mandrill API
-		$global_vars = array();
-		foreach($variables as $name => $content)
-		{
-			$global_vars[] = array(
-				'name' => $name,
-				'content' => $content 
-			);
-		}
-		
-		$message = array(
-			'merge_language' => 'handlebars',
-			'subject' => $this->subject,
-			'from_name' => $this->getConfig('from_name', ''),
-			'from_email' => $this->getConfig('from_email', ''),
-			'to' => $this->getRecipients(),
-			'global_merge_vars' => $global_vars
-		);
-		
-		$message = $this->addAttachments($message);
-		$message = $this->addSubAccount($message);
-		
-		if($send_now)
-		{
-			try
-			{
-		
-				$mandrill = new Mandrill($this->getConfig('api_key'));
-				
-				return $mandrill->messages->sendTemplate($template_slug, array(), $message);
-			}
-			catch(Exception $e)
-			{
-				// Mandrill errors are thrown as exceptions
-				$this->errors[] = 'A mandrill error occurred: ' . get_class($e) . ' - ' . $e->getMessage();
-				
-				return $this->sendBackup($body);
-			}
-		}
-		
-		return $this->scheduleSending($this->getRecipients(), $this->subject, $message, $template_slug);
-	}
-	
-	public function setAttachment($content, $name)
-	{
-		$this->attachments[$name] = base64_encode($content);
-		
-		return $this;
-	}
-	
-	public function setConfig($key, $value)
-	{
-		$this->configs[$key] = $value;
-		
-		return $this;
-	}
-	
-	public function getConfig($key, $default = null)
-	{
-		if(isset($this->configs[$key]))
-		{
-			return $this->configs[$key];
-		}
-		
-		return $default;
-	}
-	public function setConfigs(Array $configs)
-	{
-		foreach($configs as $key=>$value)
-		{
-			$this->setConfig($key, $value);
-		}
-		
-		return $this;
+		return DB::instance();
 	}
 	
 	public function setSubject($subject)
@@ -165,11 +78,6 @@ class Mandrill_Mailer {
 		return $this;
 	}
 	
-	public function getErrors()
-	{
-		return $this->errors;
-	}
-	
 	private function getRecipients()
 	{
 		if($this->getConfig('pretend', false) === true)
@@ -185,81 +93,190 @@ class Mandrill_Mailer {
 			);
 		}
 		
-		return $this->recipients;
+		$recipients = $this->recipients;
+		
+		# lets send a copy of the email to the sender
+		if($this->getConfig('send_copy', false) === true)
+		{
+			$recipients[] = array(
+				'email'		=> $this->getConfig('from_email', ''),
+				'type'		=> 'to',
+			);
+		}
+		
+		return $recipients;
 	}
 	
-	private function scheduleSending($recipients, $subject, $payload, $template_slug = null)
+	public function getErrors()
 	{
-		global $db;
-		global $cfg;
-		
-		$now = date('Y-m-d H:i:s');
-		$values = array(
-			'created_at'		=> $now,
-			'updated_at'		=> $now,
-			'esp'				=> 'mandrill',
-			'template_slug'		=> $template_slug,
-			'subject'			=> $subject,
-			'recipients_json'	=> json_encode($recipients),
-			'payload_json'		=> json_encode($payload)
+		return $this->errors;
+	}
+	
+	public function addAttachment($name, $content)
+	{
+		$this->attachments[] = array(
+			'type' => $this->getAttachmentTypeByName($name),
+			'name' => $name,
+			'content' => base64_encode($content)
 		);
 		
-		$fields = '';
-		foreach($values as $field => $value)
-		{
-			$fields .= " `{$field}` = '" . mysql_real_escape_string($value) . "' ,";
-		}
-		
-		$fields = preg_replace("/,$/", '', $fields);
-		
-		$res = mysql_query("INSERT INTO `{$cfg['db_prefix']}scheduled_emails` SET $fields");
-		
-		return $res;
+		return $this;
 	}
 	
-	private function sendBackup($content)
+	public function scheduleHtml($html)
 	{
-		$headers = array("From: " . $this->getConfig('from_name', ''),'MIME-Version: 1.0','Content-Type: text/html; charset=UTF-8');
-		$mail = $this->getConfig('pretend_email', '');
-		
-		$recipients = array();
-		foreach($this->getRecipients() as $recipient)
+		if($this->getConfig('include_unsubscribe_link', false) === true)
 		{
-			$recipients[] = $recipient['email'];
+			$html .= $this->getConfig('unsubscribe_link', '');
 		}
 		
-		if($mail)
-		{
-			return mail($mail, "Mandrill Error [" . $this->subject . " to " . implode(',', $recipients) . "]", $content , implode("\r\n", $headers));
-		}
+		$content = array('type' => 'html', 'content' => $html);
+		
+		return $this->sendOrScheduleMail($content);
 	}
 	
-	private function addAttachments($message)
+	public function sendHtml($html)
 	{
-		if(count($this->attachments))
+		if($this->getConfig('include_unsubscribe_link', false) === true)
 		{
-			foreach($this->attachments as $n=>$att)
+			$html .= $this->getConfig('unsubscribe_link', '');
+		}
+		
+		$content = array('type' => 'html', 'content' => $html);
+		
+		return $this->sendOrScheduleMail($content, true);
+	}
+	
+	public function scheduleTemplate($template_slug, $variables = array())
+	{
+		$content = array('type' => 'template', 'template_slug' => $template_slug,  'variables' => $variables);
+		
+		return $this->sendOrScheduleMail($content);
+	}
+	
+	public function sendTemplate($template_slug, $variables = array())
+	{
+		$content = array('type' => 'template', 'template_slug' => $template_slug,  'variables' => $variables);
+		
+		return $this->sendOrScheduleMail($content, true);
+	}
+	
+	private function sendOrScheduleMail($content, $send_now = false)
+	{
+		$service = $this->getServiceInstance($this->getConfig('service', ''));
+		$db_conn = $this->getDBConnection();
+		
+		$mail = array_merge($content , array(
+			'subject' => $this->subject,
+			'from_name' => $this->getConfig('from_name', ''),
+			'from_email' => $this->getConfig('from_email', ''),
+			'attachments' => $this->attachments,
+			'recipients' => $this->getRecipients()
+		));
+		
+		# have email service prepare the payload they way it needs it
+		$payload = $service->preparePayload($mail);
+		
+		$entry = array(
+			'recipients'=> $this->getRecipients(),
+			'subject'	=> $this->subject,
+			'payload'	=> $payload,
+			'esp'		=> $this->getConfig('service'),
+			'template'	=> isset($mail['template_slug']) ? $mail['template_slug'] : '',
+			'attempt'	=> $send_now
+		);
+		
+		# save entry, no matter if the user wants us to send it right away, so we can re-attempt later if need it
+		if( $entry = $db_conn->saveEntry($entry) )
+		{
+			$success = true;
+			if($send_now)
 			{
-				$message['attachments'][] = array(
-					'type' => $this->getAttachmentTypeByName($n),
-					'name' => $n,
-					'content' => $att
-				);
+				$send_result = $this->attemptSendingMail(array($entry));
 			}
 		}
-		
-		return $message;
-	}
-	
-	private function addSubAccount($message)
-	{
-		
-		if($subaccount = $this->getConfig('subaccount', false))
+		else
 		{
-			$message['subaccount'] = $subaccount;
+			$success = false;
+			
+			$this->errors[] = $db_conn->getLastError();
 		}
 		
-		return $message;
+		$errors = $this->getErrors();
+		
+		return compact('success','errors','send_result');
+	}
+	
+	public function sendScheduled()
+	{
+		$db_conn = $this->getDBConnection();
+		
+		$numToTake = $this->getConfig('send_per_run', 5);
+		
+		$mails = $db_conn->getUnsentEntries($numToTake);
+		
+		$failedNumToTake = (count($mails) == $numToTake ? 1 : ( $numToTake - count($mails) ) );
+		$failsLimit = $this->getConfig('resend_attempts', 5);
+
+		//get any entries that have not been attempted in the last 10 minutes
+		$fails = $db_conn->getFailedEntries($failsLimit, $failedNumToTake);
+		
+		foreach($fails as $failed)
+		{
+			array_push($mails,$failed);
+		}
+		
+		/*
+			if we want to increase number of rows to take,we need to make sure all of them are locked by
+			setting their attempted_at to 'now'
+		*/
+		if( ! count($mails))
+		{
+			$criteria = $this->getConfig('delete_criteria', array());
+			
+			$res = $db_conn->deleteOldEntries($criteria);
+			
+			return array('nothing to send', $res);
+		}
+		
+		$db_conn->lockEntries($mails);
+
+		return $this->attemptSendingMail($mails);
+
+	}
+	
+	private function attemptSendingMail(Array $mails)
+	{
+		$db_conn = $this->getDBConnection();
+		
+		$results = array();
+		foreach($mails as $mail)
+		{
+			$service = $this->getServiceInstance($mail['esp']);
+			
+			$updates = array();
+			$send_result = $service->send($mail);
+			
+			if($send_result['sent'])
+			{
+				$updates['sent_at'] = date('Y-m-d H:i:s');
+			}
+			else
+			{
+				$updates['attempts'] = $mail['attempts'] + 1;
+				
+				if($updates['attempts'] == $this->getConfig('resend_attempts', 5))
+				{
+					$this->sendFailedWarning($send_result, $mail);
+				}
+			}
+			
+			$db_conn->updateEntry($mail, $updates);
+			
+			$results[] = $send_result;
+		}
+		
+		return $results;
 	}
 	
 	private function getAttachmentTypeByName($name)
@@ -438,5 +455,57 @@ class Mandrill_Mailer {
 			'xyz'     => 'chemical/x-xyz',
 			'zip'     => 'application/zip'
 		);
+	}
+	
+	private function sendFailedWarning($result, $mail)
+	{
+		$mail['payload'] = json_decode($mail['payload_json'], true);
+		
+		unset($mail['payload_json']);
+		
+		$mail = static::mailerArrayFlatten($mail);
+		$result = static::mailerArrayFlatten($result);
+		
+		$msg = "--- Mail Info ---\r\n\r\n";
+		
+		foreach($mail as $title=>$row)
+		{
+			$msg .= "$title: $row \r\n";
+		}
+		
+		$msg .= "\r\n--- Response Info ---\r\n\r\n";
+		
+		foreach($result as $title=>$row)
+		{
+			$msg .= "$title: $row \r\n";
+		}
+		
+		$subject = "[" . $_SERVER['HTTP_HOST'] . "] Mail sending failed " . $this->getConfig('resend_attempts', 5) . " times";
+		
+		mail($this->getConfig('pretend_email'), $subject, $msg);
+	}
+	
+	private function mailerArrayFlatten($array)
+	{
+		$return = array();
+		foreach ($array as $key => $value)
+		{
+			if (is_array($value))
+			{
+				$return = array_merge($return, static::mailerArrayFlatten($value));
+			}
+			else
+			{
+				$return[$key] = $value;
+			}
+		}
+		return $return;
+	}
+	
+	private function camelCase($service_name)
+	{
+		$service_name = ucwords(str_replace(array('-', '_'), ' ', $service_name));
+
+		return str_replace(' ', '', $service_name);
 	}
 }

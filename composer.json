@@ -1,4 +1,13 @@
 {
-    "name": "rutgerhensel/mandrill-sending",
-    "description": "Mandrill Mailer Package"
+	"name": "rutgerhensel/mandrill-sending",
+	"description": "Mandrill Mailer Package",
+	"require": {
+		"mandrill/mandrill": "1.0.*"
+	},
+	"autoload":{
+		"exclude-from-classmap": ["lib/services/", "lib/db/drivers/"],
+		"psr-4": {
+			"Mailer\\": "lib/"
+		}
+	}
 }

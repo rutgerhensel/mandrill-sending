@@ -1,26 +1,17 @@
-install Mailer package
+Installing Mailer
 
-include mailer/Mailer.php so it can be use globally,
-you can also just include it just before using it.
+By default, this mailer uses the Mandrill Mail service to send email. We'll add support for other mail services in the future.
 
-# available configuration
-$config = array(
-	'api_key' => '',
-	'from_email' => '',
-	'from_name' => '',
-	
-	'pretend' = false,
-	'pretend_email' => '',
-	
-	'include_unsubscribe_link'=> true,
-	'unsubscribe_link' => "
-		<br />
-		<br />
-		<p style=\"font-family:'Tahoma','sans-serif';font-size:10px\">
-			To unsubscribe <a href=\"*|UNSUB:http://you.site.here.com/unsub|*\">click here</a>. 
-		</p>
-	";
+All configuration for this mailer is located in the 'config.example' folder. Rename this folder to 'config', then set configuration that
+meets your needs
 
+# single recipients
+$recipients = array(
+	'name'	=> 'full name',
+	'first'	=> 'first name',
+	'last'	=> 'last name',
+	'email'	=> 'valid@mail.mail',
+	'type'	=> 'to' // can be 'to','cc','bcc'
 );
 
 # multiple recipients
@@ -41,30 +32,42 @@ $recipients = array(
 	),
 );
 
-# single recipients
-$recipients = array(
-	'name'	=> 'full name',
-	'first'	=> 'first name',
-	'last'	=> 'last name',
-	'email'	=> 'valid@mail.mail',
-	'type'	=> 'to' // can be 'to','cc','bcc'
-);
-
 # array of vars to use on mandril template
 $array_of_vars = array('var_1' => 'value', 'var_2' => 'value' );
 
-Mailer::instance('mandril', $config) //'mandrill' or other email service
+
+scheduleHtml() and scheduleTemplate() will add to mail to the sending queue by adding an entry to the db, but leaves the sending up to the sending scheduled mail job;
+
+sendHtml() and sendTemplate() will add to mail to the sending queue AND attempt to send right away.
+
+# simplest use, using default configuration, which is set on config/config.php
+
+$html = '<h2>Hello There</2>';
+
+Mailer::instance()
 	->setSubject('subject')
 	->setRecipients($recipients)
-	->sendTemplate('mandrill-template-slug', $array_of_vars);
+	->scheduleHtml($html);
 	
-Mailer::instance('mandrill',$config)//'mandrill' or other email service
+Mailer::instance()
 	->setSubject('subject')
 	->setRecipients($recipients)
-	->sendHtml($html);
+	->scheduleTemplate('template-slug', $array_of_vars);
+
+
+# Passing array of configuration to override defaults
+
+$configs = array('from_email' => 'noreply@example.com');
 	
+Mailer::instance($configs)//'mandrill' or other email service
+	->setSubject('subject')
+	->setRecipients($recipients)
+	->scheduleHtml($html);
+
+
 # You can also set configuration after instantiating class
-$mailer = Mailer::instance('mandrill');
+
+$mailer = Mailer::instance();
 
 # with array
 
@@ -83,29 +86,25 @@ $result = $mailer->setSubject('subject')
 
 print_r($result);
 
+# adding attachments
+
+Mailer::instance()
+	->setSubject('subject')
+	->setRecipients($recipients)
+	->addAttachment('attachment_name.txt', 'This is an attachment')
+	->scheduleTemplate('template-slug', $array_of_vars);
+
+# send mail right away (attempt to send the mail right after saving the entry in db )
+
+Mailer::instance()
+	->setSubject('subject')
+	->setRecipients($recipients)
+	->sendHtml($html);
+	
+# To run sending scheduled mail job
+Mailer::instance()->sendScheduled();
+
 for Mandrill templates, we use 'handlebars' for dynamic content:
 
 https://mandrill.zendesk.com/hc/en-us/articles/205582537-Using-Handlebars-for-Dynamic-Content
-
-database
-
-
-CREATE TABLE `basejump_scheduled_emails` (
-  `id` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `attempted_at` datetime DEFAULT NULL,
-  `sent_at` datetime DEFAULT NULL,
-  `esp` varchar(64) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'mandrill',
-  `template_slug` varchar(64) COLLATE utf8_unicode_ci NOT NULL,
-  `subject` varchar(256) COLLATE utf8_unicode_ci NOT NULL,
-  `recipients_json` text COLLATE utf8_unicode_ci NOT NULL,
-  `payload_json` mediumtext COLLATE utf8_unicode_ci NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
-ALTER TABLE `basejump_scheduled_emails`
-  ADD PRIMARY KEY (`id`);
-
-ALTER TABLE `basejump_scheduled_emails`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
