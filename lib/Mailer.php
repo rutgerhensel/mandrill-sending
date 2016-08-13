@@ -17,7 +17,7 @@ class Mailer extends Configurable
 	
 	private function __construct($configs = array())
 	{
-		$defaults = require(dirname(__FILE__) . '/../config/config.php');
+		$defaults = $this->loadConfigsFromFile('config');
 		
 		$this->setConfigs($defaults);
 		

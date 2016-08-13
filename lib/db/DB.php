@@ -6,7 +6,7 @@ class DB extends Configurable
 {
 	public static function instance()
 	{
-		$configuration = require(dirname(__FILE__) . '/../../config/db.php');
+		$configuration = static::loadConfigsFromFile('db');
 		
 		$driver_name = isset($configuration['driver']) ? $configuration['driver'] : '';
 		$driver_name = static::camelCase($driver_name);
