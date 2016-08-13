@@ -65,7 +65,10 @@ class MysqlDriver extends Configurable implements DriverContract
 		$fields = array();
 		foreach($entry as $field => $value)
 		{
-			$fields[] = "`{$field}` = '" . mysql_real_escape_string($value) . "'";
+			if( ! is_null($value))
+			{
+				$fields[] = "`{$field}` = '" . mysql_real_escape_string($value) . "'";
+			}
 		}
 		
 		$sql = "
