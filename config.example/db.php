@@ -6,11 +6,11 @@ return array(
 	| Database driver
 	|--------------------------------------------------------------------------
 	|
-	|can be 'mysql' or 'pdo'
+	|can be 'mysql-driver' or 'pdo-driver' (had to add '-driver' because of colisions with PDO and mysql libraries
 	|
 	*/
 	
-	'driver'    => 'pdo-driver', //had to add '-driver' because of colisions with PDO library
+	'driver'    => 'mysql-driver', 
 	
 	/*
 	|--------------------------------------------------------------------------

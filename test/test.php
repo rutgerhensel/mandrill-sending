@@ -24,8 +24,9 @@ $result = Mailer::instance()
 	->setSubject('Testing')
 	->setRecipients($recipients)
 	->addAttachment('attachment_name.txt', 'This is an attachment')
-	->scheduleHtml($html);
+	->scheduleTemplate('template', $array_of_vars);
 */
+
 
 
 $result = Mailer::instance()->sendScheduled();
