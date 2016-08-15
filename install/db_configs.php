@@ -19,10 +19,10 @@ return array(
 	|
 	*/
 	'credentials' => array(
-		'host'      => 'localhost',
-		'database'  => 'tamsbu',
+		'host'      => 'host',
+		'database'  => 'dbname',
 		'username'  => 'root',
 		'password'  => 'root',
-		'prefix'    => 'basejump_'
+		'prefix'    => 'prefix_'
 	),
 );

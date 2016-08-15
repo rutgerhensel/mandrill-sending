@@ -2,8 +2,23 @@ Installing Mailer
 
 By default, this mailer uses the Mandrill Mail service to send email. We'll add support for other mail services in the future.
 
-All configuration for this mailer is located in the 'config.example' folder. Rename this folder to 'config', then set configuration that
-meets your needs
+An array of all configuration used on this package along with the mysql code need it is located in the install directory
+
+require_once dirname(__FILE__) . '/../vendor/autoload.php';
+
+# make alias of Mailer (if need and desired)
+use Mailer\Mailer as Mailer;
+
+# make alias of Mailer (if need and desired)
+use Mailer\DB\DB as MailerDB;
+
+# add default functionality
+$configs = Array(...);
+Mailer::setDefaults($configs);
+
+# add db configuration;
+$db_config = Array(...);
+MailerDB::setDefaults($db_config);
 
 # single recipients
 $recipients = array(
