@@ -15,11 +15,11 @@ class Mailer extends Configurable
 	
 	protected $errors = array();
 	
+	public static $defaults = array();
+	
 	private function __construct($configs = array())
 	{
-		$defaults = $this->loadConfigsFromFile('config');
-		
-		$this->setConfigs($defaults);
+		$this->loadDefaultConfiguration();
 		
 		#override any configuration
 		$this->setConfigs($configs);

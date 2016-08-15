@@ -4,9 +4,11 @@ use Mailer\Configurable;
 
 class DB extends Configurable
 {
+	public static $defaults = array();
+
 	public static function instance()
 	{
-		$configuration = static::loadConfigsFromFile('db');
+		$configuration = static::$defaults;
 		
 		$driver_name = isset($configuration['driver']) ? $configuration['driver'] : '';
 		$driver_name = static::camelCase($driver_name);
