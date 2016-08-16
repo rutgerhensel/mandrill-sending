@@ -92,11 +92,9 @@ class MysqlDriver extends Configurable implements DriverContract
 	public function updateEntry(Array $mail, Array $updates)
 	{
 		$fields = array();
-		$values = array();
 		foreach($updates as $field => $value)
 		{
-			$fields[] = "`{$field}` = ? ";
-			$values[] = $value;
+			$fields[] = "`{$field}` = '" . mysql_real_escape_string($value) . "' ";
 		}
 
 		$sql = "
