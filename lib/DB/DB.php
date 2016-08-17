@@ -12,7 +12,9 @@ class DB extends Configurable
 		
 		$driver_name = isset($configuration['driver']) ? $configuration['driver'] : '';
 		$driver_name = static::camelCase($driver_name);
-		$drivers_path = dirname(__FILE__) . "/drivers";
+		$drivers_path = dirname(__FILE__) . "/Drivers";
+		
+		$driver_name = ucfirst($service_name);
 		
 		require_once("{$drivers_path}/{$driver_name}.php");
 		

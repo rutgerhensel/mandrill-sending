@@ -32,9 +32,11 @@ class Mailer extends Configurable
 	
 	private function getServiceInstance($service_name)
 	{
-		$services_path = dirname(__FILE__) . "/services";
+		$services_path = dirname(__FILE__) . "/Services";
 		$service_namepace = $this->camelCase($service_name);
 		$configuration = $this->getConfig($service_name, array());
+		
+		$service_name = ucfirst($service_name);
 		
 		if(! is_dir("{$services_path}/{$service_name}/"))
 		{
