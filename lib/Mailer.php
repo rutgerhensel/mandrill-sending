@@ -96,7 +96,7 @@ class Mailer extends Configurable
 		$recipients = $this->recipients;
 		
 		# lets send a copy of the email to the sender
-		if($this->getConfig('send_copy', false) === true)
+		if($this->getConfig('send_copy_to_sender', false) === true)
 		{
 			$recipients[] = array(
 				'email'		=> $this->getConfig('from_email', ''),

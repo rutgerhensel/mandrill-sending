@@ -2,14 +2,39 @@ Installing Mailer
 
 By default, this mailer uses the Mandrill Mail service to send email. We'll add support for other mail services in the future.
 
-An array of all configuration used on this package along with the mysql code need it is located in the install directory
+An array of all configuration used on this package along with the mysql code needed is located in the install directory
+
+WARNING!!! for composer users, make sure to:
+
+1 - add this to your composer file:
+
+{
+	"require": {
+		"rutgerhensel/mandrill-sending": "1.*"
+	},
+	"repositories": [
+		{
+			"url": "https://github.com/rutgerhensel/mandrill-sending",
+			"type": "git"
+		}
+	]
+}
+
+2 - run 'composer update'
+
+3 - To prevent this package from being considered a submodule, remove the .git directory to from the vendor/rutgerhensel/mandrill-sending/ directory, or just add to .gitignore file:
+
+/api/vendor/**/.git
+/api/vendor/**/.gitignore
+
+
 
 require_once dirname(__FILE__) . '/../vendor/autoload.php';
 
-# make alias of Mailer (if need and desired)
+# make alias of Mailer (if needed and desired)
 use Mailer\Mailer as Mailer;
 
-# make alias of Mailer (if need and desired)
+# make alias of Mailer (if needed and desired)
 use Mailer\DB\DB as MailerDB;
 
 # add default functionality
