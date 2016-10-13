@@ -24,7 +24,6 @@ $array_of_vars = array();
 $html = '<h2>Hello There</2>';
 
 $overrides = array('from_email' => 'noreply@example.com');
-	
 
 $result = Mailer::instance()
 	->setSubject('Testing')
