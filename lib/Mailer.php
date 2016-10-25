@@ -256,12 +256,7 @@ class Mailer extends Configurable
 		
 		if( $rejects = $service->fetchRejectslist() )
 		{
-			if( ! $db_conn->syncRejectslist($rejects) )
-			{
-				throw new \Exception(print_r($db_conn->getLastError(), true));
-			}
-			
-			return true;
+			return $db_conn->syncRejectslist($rejects);
 		}
 		
 		return false;

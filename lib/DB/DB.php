@@ -28,7 +28,6 @@ class DB extends Configurable
 		$settings = isset($configuration['credentials']) ? $configuration['credentials'] : array();
 		
 		$settings['tables'] = array('mailer_rejects', 'scheduled_emails');
-		$settings['rejects_updatable'] = array('reason','detail','expired','added_at','last_event_at','expires_at');
 		
 		return new $class($settings);
 	}

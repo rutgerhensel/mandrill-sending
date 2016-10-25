@@ -246,48 +246,121 @@ class PdoDriver extends Configurable implements DriverContract
 	
 	public function syncRejectslist(Array $list)
 	{
+		$response = array('list_total' => count($list));
+		
+		# if we do not have anything to work with we bail
+		if(empty($list))
+		{
+			return $response;
+		}
+		
+		$emails_from_list = array_map(function($row)
+		{
+			return $row['email'];
+		},
+		$list);
+		
+		#get existing rows
+		$sql = "SELECT
+					`email`, `reason`
+				FROM `" . $this->getConfig('prefix', '') . "mailer_rejects`
+				WHERE `email` IN('" . implode("','", $emails_from_list) . "')
+		";
+		
+		$stmt = static::$connection->query($sql);
+		
+		$res = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		
+		$reject_reasons = array();
+		$existing_emails = array();
+		foreach($res as $row)
+		{
+			$reject_reasons[$row['email']] = $row['reason'];
+			$existing_emails[] = $row['email'];
+		}
+		
+		$response['existing'] = count($existing_emails);
+		
 		$fields = $this->getTableFields('mailer_rejects');
 		
-		#remove id
-		unset($fields[0]);
-		
-		$old_keys = $this->getConfig('rejects_updatable', array());
-		
-		$errors = array();
-		
-		foreach($list as $row)
+		#remove id and created at
+		foreach($fields as $index=>$field)
 		{
-			$now = date('Y-m-d H:i:s');
-			
-			$row = array_map('mysql_real_escape_string', $row);
-			
-			$row['created_at'] = $now;
-			$row['updated_at'] = $now;
-			
-			$sql = "INSERT INTO `" . $this->getConfig('prefix', '') . "mailer_rejects` (" . implode(',', $fields) . ") VALUES ";
-			$sql .= "(" . implode(",", array_fill(0, count($row), '?')) . ") ";
-			
-			$sql .= "ON DUPLICATE KEY UPDATE";
-			
-			foreach($old_keys as $field)
+			if(in_array($field, array('id','created_at')))
 			{
-				$sql .= " {$field} = VALUES($field),";
-			}
-			
-			$sql .= "updated_at = '{$now}';";
-			
-			$sth = static::$connection->prepare($sql);
-		
-			if( ! $success =  $sth->execute( array_values($row) ) )
-			{
-				$err = $sth->errorInfo();
-				$errors[] = isset($err[2]) ? $err[2] : 'Error Inserting Entry.';
+				unset($fields[$index]);
 			}
 		}
 		
-		$this->last_error = $errors;
+		$errors = array();
+		$adds = array();
+		$updates = array();
 		
-		return empty($errors);
+		$now = date('Y-m-d H:i:s');
+
+		foreach($list as $row)
+		{
+			$sql = false;
+			
+			$row = array_map(function($value)
+			{
+				if(is_null($value))
+				{
+					$value = '';
+				}
+				
+				return $value;
+			}
+			, $row);
+			
+			$row['updated_at'] = $now;
+			
+			if( in_array($row['email'], $existing_emails) )
+			{
+				# we only update if row already exist and the reason has been updated
+				if($reject_reasons[$row['email']] != $row['reason'])
+				{
+					$updates[] = $row['email'];
+					
+					foreach($fields as $index => $field)
+					{
+						$sub_sql[] = "`{$field}` = ? ";
+					}
+					
+					$row['compare_email'] = $row['email'];
+					
+					$sql = "UPDATE `" . $this->getConfig('prefix', '') . "mailer_rejects` SET " . implode(',', $sub_sql);
+					$sql .= " WHERE `email` = ?";
+				}
+			}
+			else
+			{
+				$adds[] = $row['email'];
+				
+				$row['created_at'] = $now;
+				
+				$sql = "INSERT INTO `" . $this->getConfig('prefix', '') . "mailer_rejects` (" . implode(',', $fields) . ", created_at) VALUES ";
+				$sql .= "(" . implode(",", array_fill(0, count($row), '?')) . ") ";
+			}
+			
+			if($sql)
+			{
+				$sth = static::$connection->prepare($sql);
+			
+				if( ! $success =  $sth->execute( array_values($row) ) )
+				{
+					var_dump($row);
+					$err = $sth->errorInfo();
+					$errors[$row['email']] = isset($err[2]) ? $err[2] : 'Error Inserting Entry.';
+				}
+			}
+		}
+		
+		$response['errors'] = $errors;
+		$response['adds'] = $adds;
+		$response['updates'] = $updates;
+		
+		return $response;
 	}
 	
 	public function getTableFields($table)
