@@ -239,6 +239,98 @@ class MysqlDriver extends Configurable implements DriverContract
 		return $result;
 	}
 	
+	public function getRejectsList($from, $to)
+	{
+		$sql = "
+			SELECT * 
+			FROM `" . $this->getConfig('prefix', '') . "mailer_rejects`
+			WHERE DATE(`last_event_at`) >= '{$from}'
+			AND DATE(`last_event_at`) <= '{$to}'
+			ORDER BY last_event_at DESC
+		";//die($sql);
+		
+		if( ! $res = mysql_query($sql) )
+		{
+			$this->last_error = mysql_error();
+			
+			return false;
+		}
+		
+		$entries = array();
+		while($entry = mysql_fetch_assoc($res))
+		{
+			unset($entry['id']);
+			$entries[] = $entry;
+		}
+		
+		return $entries;
+	}
+	
+	public function syncRejectslist(Array $list)
+	{
+		$fields = $this->getTableFields('mailer_rejects');
+		
+		#remove id
+		unset($fields[0]);
+		
+		$old_keys = $this->getConfig('rejects_updatable', array());
+		
+		$errors = array();
+		
+		foreach($list as $row)
+		{
+			$now = date('Y-m-d H:i:s');
+			
+			$row = array_map('mysql_real_escape_string', $row);
+			
+			$row['created_at'] = $now;
+			$row['updated_at'] = $now;
+			
+			$sql = "INSERT INTO `" . $this->getConfig('prefix', '') . "mailer_rejects` (" . implode(',', $fields) . ") VALUES ";
+			$sql .= "('" . implode("','", $row) . "') ";
+			
+			$sql .= "ON DUPLICATE KEY UPDATE";
+			
+			foreach($old_keys as $field)
+			{
+				$sql .= " {$field} = VALUES($field),";
+			}
+			
+			$sql .= "updated_at = '{$now}';";
+			
+			if( !mysql_query($sql) )
+			{
+				$errors[] = mysql_error();
+			}
+		}
+		
+		$this->last_error = $errors;
+		
+		return empty($errors);
+	}
+	
+	public function getTableFields($table)
+	{
+		$table = mysql_real_escape_string($table);
+		$sql = "SHOW COLUMNS FROM `" . $this->getConfig('prefix', '') . "{$table}`";
+		
+		if( ! $res = mysql_query($sql) )
+		{
+			$this->last_error = mysql_error();
+			
+			return false;
+		}
+		
+		$fields = array();
+		
+		while($row = mysql_fetch_assoc($res))
+		{
+			$fields[] = $row['Field'];
+		}
+		
+		return $fields;
+	}
+	
 	public function getLastError()
 	{
 		return $this->last_error;

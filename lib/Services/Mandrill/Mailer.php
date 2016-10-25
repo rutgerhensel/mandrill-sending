@@ -9,6 +9,18 @@ class Mailer extends Configurable implements ServiceContract
 	public function __construct($configs = array())
 	{
 		$this->setConfigs($configs);
+		
+		$rejects_table_mapping = array(
+			'email' => 'email',
+			'reason' => 'reason',
+			'detail' => 'detail',
+			'expired' => 'expired',
+			'added_at' => 'created_at',
+			'last_event_at' => 'last_event_at',
+			'expires_at' => 'expires_at',
+		);
+		
+		$this->setConfig('rejects_table_mapping', $rejects_table_mapping);
 	}
 
 	public function preparePayload(Array $mail)
@@ -93,6 +105,37 @@ class Mailer extends Configurable implements ServiceContract
 		}
 		
 		return $result;
+	}
+	
+	public function fetchRejectslist()
+	{
+		try
+		{
+			$mandrill = new \Mandrill($this->getConfig('api_key'));
+			
+			$raw = $mandrill->rejects->getList(null, true, $this->getConfig('subaccount', null));
+		}
+		catch(\Exception $e)
+		{
+			return false;
+		}
+		
+		$fields = $this->getConfig('rejects_table_mapping', array());
+		$rejects = array();
+		
+		# we need to make sure indexes match table fields
+		foreach($raw as $row)
+		{
+			$reject = array();
+			foreach($fields as $table=>$list)
+			{
+				$reject[$table] = $row[$list];
+			}
+			
+			$rejects[] = $reject;
+		}
+		
+		return $rejects;
 	}
 	
 	private static function extractRecipients($mail)

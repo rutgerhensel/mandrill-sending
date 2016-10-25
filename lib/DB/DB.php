@@ -25,9 +25,12 @@ class DB extends Configurable
 			throw new \Exception("Class '$class' does not exist.");
 		}
 		
-		$credentials = isset($configuration['credentials']) ? $configuration['credentials'] : array();
+		$settings = isset($configuration['credentials']) ? $configuration['credentials'] : array();
 		
-		return new $class($credentials);
+		$settings['tables'] = array('mailer_rejects', 'scheduled_emails');
+		$settings['rejects_updatable'] = array('reason','detail','expired','added_at','last_event_at','expires_at');
+		
+		return new $class($settings);
 	}
 	
 	private static function camelCase($service_name)

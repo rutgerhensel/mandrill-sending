@@ -220,6 +220,100 @@ class PdoDriver extends Configurable implements DriverContract
 		return $result;
 	}
 	
+	public function getRejectsList($from, $to)
+	{
+		$sql = "
+			SELECT * 
+			FROM `" . $this->getConfig('prefix', '') . "mailer_rejects`
+			WHERE DATE(`last_event_at`) >= '{$from}'
+			AND DATE(`last_event_at`) <= '{$to}'
+			ORDER BY last_event_at DESC
+		";//die($sql);
+		
+		$stmt = static::$connection->query($sql);
+		
+		$raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		
+		$entries = array();
+		foreach($raw as $row)
+		{
+			unset($row['id']);
+			$entries[] = $row;
+		}
+		
+		return $entries;
+	}
+	
+	public function syncRejectslist(Array $list)
+	{
+		$fields = $this->getTableFields('mailer_rejects');
+		
+		#remove id
+		unset($fields[0]);
+		
+		$old_keys = $this->getConfig('rejects_updatable', array());
+		
+		$errors = array();
+		
+		foreach($list as $row)
+		{
+			$now = date('Y-m-d H:i:s');
+			
+			$row = array_map('mysql_real_escape_string', $row);
+			
+			$row['created_at'] = $now;
+			$row['updated_at'] = $now;
+			
+			$sql = "INSERT INTO `" . $this->getConfig('prefix', '') . "mailer_rejects` (" . implode(',', $fields) . ") VALUES ";
+			$sql .= "(" . implode(",", array_fill(0, count($row), '?')) . ") ";
+			
+			$sql .= "ON DUPLICATE KEY UPDATE";
+			
+			foreach($old_keys as $field)
+			{
+				$sql .= " {$field} = VALUES($field),";
+			}
+			
+			$sql .= "updated_at = '{$now}';";
+			
+			$sth = static::$connection->prepare($sql);
+		
+			if( ! $success =  $sth->execute( array_values($row) ) )
+			{
+				$err = $sth->errorInfo();
+				$errors[] = isset($err[2]) ? $err[2] : 'Error Inserting Entry.';
+			}
+		}
+		
+		$this->last_error = $errors;
+		
+		return empty($errors);
+	}
+	
+	public function getTableFields($table)
+	{
+		if( ! in_array($table, $this->getConfig( 'tables', array() ) ) )
+		{
+			$this->last_error = "Invalid table name '{$table}'";
+			
+			print_r($this->last_error);
+			
+			return false;
+		}
+		
+		$sql = "SHOW COLUMNS FROM `" . $this->getConfig('prefix', '') . "$table`";
+		
+		
+		if (! $stmt = static::$connection->query($sql) )
+		{
+			$this->last_error = 'Error Fetching table fields.';
+			
+			return false;
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_COLUMN);
+	}
+	
 	public function getLastError()
 	{
 		return $this->last_error;

@@ -18,5 +18,11 @@ Interface DriverContract
 	
 	public function deleteOldEntries($criteria);
 	
+	public function syncRejectslist(Array $list);
+	
+	public function getRejectsList($from, $to);
+	
+	public function getTableFields($table);
+	
 	public function getLastError();
 }

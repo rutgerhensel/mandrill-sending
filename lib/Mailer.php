@@ -30,8 +30,10 @@ class Mailer extends Configurable
 		return new static($configs);
 	}
 	
-	private function getServiceInstance($service_name)
+	private function getServiceInstance()
 	{
+		$service_name = $this->getConfig('service', '');
+		
 		$services_path = dirname(__FILE__) . "/Services";
 		$service_namepace = $this->camelCase($service_name);
 		$configuration = $this->getConfig($service_name, array());
@@ -165,7 +167,7 @@ class Mailer extends Configurable
 	
 	private function sendOrScheduleMail($content, $send_now = false)
 	{
-		$service = $this->getServiceInstance($this->getConfig('service', ''));
+		$service = $this->getServiceInstance();
 		$db_conn = $this->getDBConnection();
 		
 		$mail = array_merge($content , array(
@@ -247,6 +249,70 @@ class Mailer extends Configurable
 
 	}
 	
+	public function syncRejectslist()
+	{
+		$service = $this->getServiceInstance();
+		$db_conn = $this->getDBConnection();
+		
+		if( $rejects = $service->fetchRejectslist() )
+		{
+			if( ! $db_conn->syncRejectslist($rejects) )
+			{
+				throw new \Exception(print_r($db_conn->getLastError(), true));
+			}
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public function sendRejectsReport($from = null, $to = null)
+	{
+		if(is_null($from))
+		{
+			$from = date('Y-m-d');
+		}
+		
+		if(is_null($to))
+		{
+			$to = date('Y-m-d');
+		}
+		
+		$str_time = strtotime($from);
+		$end_time = strtotime($to);
+		
+		$db_conn = $this->getDBConnection();
+		
+		$list = $db_conn->getRejectsList($from, $to);
+		
+		$recipients = array(
+			'email'	=> $this->getConfig('pretend_email', ''),
+			'type'	=> 'to'
+		);
+		
+		$html = $this->rejectsListToHTML($list);
+		
+		if($str_time == $end_time)
+		{
+			$range = date('M jS Y', $str_time);
+		}
+		else
+		{
+			$str_year = date('Y', $str_time) == date('Y', $end_time) ? '' : (date('Y', $str_time) . ' ');
+			
+			$start = date('M jS ', $str_time) . $str_year;
+			$range = $start . 'to ' . date('M jS Y', $end_time);
+		}
+		
+		$subject = "[Mailer] Rejects list from {$range}";
+		
+		return static::instance()
+			->setSubject($subject)
+			->setRecipients($recipients)
+			->scheduleHtml($html);
+	}
+	
 	private function attemptSendingMail(Array $mails)
 	{
 		$db_conn = $this->getDBConnection();
@@ -254,7 +320,7 @@ class Mailer extends Configurable
 		$results = array();
 		foreach($mails as $mail)
 		{
-			$service = $this->getServiceInstance($mail['esp']);
+			$service = $this->getServiceInstance();
 			
 			$updates = array();
 			$send_result = $service->send($mail);
@@ -509,5 +575,29 @@ class Mailer extends Configurable
 		$service_name = ucwords(str_replace(array('-', '_'), ' ', $service_name));
 
 		return str_replace(' ', '', $service_name);
+	}
+	
+	private function rejectsListToHTML(Array $list)
+	{
+		$db_conn = $this->getDBConnection();
+
+		$fields = $db_conn->getTableFields('mailer_rejects');
+		
+		#remove id
+		unset($fields[0]);
+		
+		$td_styles = 'border: 1px solid #ccc; padding:5px';
+		
+		$html = '<table style="border-collapse: collapse;border-spacing: 0;">';
+		$html .= '<tr><th style="'.$td_styles.'">' . implode('</th><th style="'.$td_styles.'">', $fields) . '</th></tr>';
+		
+		foreach($list as $row)
+		{
+			$html .= '<tr><td style="'.$td_styles.'">' . implode('</td><td style="'.$td_styles.'">', $row) . '</td></tr>';
+		}
+		
+		$html .= '</table>';
+		
+		return "<!DOCTYPE html><html><head><meta charset=utf-8></head><body>{$html}</body></html>";
 	}
 }

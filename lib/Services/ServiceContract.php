@@ -9,4 +9,6 @@ Interface ServiceContract
 	public function preparePayload(Array $mail);
 	
 	public function send(Array $mail);
+	
+	public function fetchRejectslist();
 }
