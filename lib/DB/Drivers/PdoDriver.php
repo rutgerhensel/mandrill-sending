@@ -35,6 +35,7 @@ class PdoDriver extends Configurable implements DriverContract
 		catch (\PDOException $e)
 		{
 			$this->last_error = $e->getMessage();
+			return false;
 		}
 		
 		return $conn;

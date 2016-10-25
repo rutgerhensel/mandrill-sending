@@ -5,6 +5,7 @@ use Mailer\Configurable;
 
 class Mailer extends Configurable implements ServiceContract
 {
+	private $last_error;
 
 	public function __construct($configs = array())
 	{
@@ -117,6 +118,7 @@ class Mailer extends Configurable implements ServiceContract
 		}
 		catch(\Exception $e)
 		{
+			$this->last_error = $e->getMessage();
 			return false;
 		}
 		
@@ -160,6 +162,11 @@ class Mailer extends Configurable implements ServiceContract
 		}
 		
 		return $message;
+	}
+	
+	public function getLastError()
+	{
+		return $this->last_error;
 	}
 
 }

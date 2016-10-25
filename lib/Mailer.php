@@ -258,6 +258,8 @@ class Mailer extends Configurable
 		{
 			return $db_conn->syncRejectslist($rejects);
 		}
+
+		$this->errors[] = $service->getLastError();
 		
 		return false;
 	}
@@ -279,7 +281,12 @@ class Mailer extends Configurable
 		
 		$db_conn = $this->getDBConnection();
 		
-		$list = $db_conn->getRejectsList($from, $to);
+		if( ! $list = $db_conn->getRejectsList($from, $to))
+		{
+			$this->errors[] = $db_conn->getLastError();
+			
+			return false;
+		}
 		
 		$recipients = array(
 			'email'	=> $this->getConfig('pretend_email', ''),
