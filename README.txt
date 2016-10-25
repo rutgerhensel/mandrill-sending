@@ -144,6 +144,13 @@ Mailer::instance()
 # To run sending scheduled mail job
 Mailer::instance()->sendScheduled();
 
+
+# rejects lists functionality
+
+$result = Mailer::instance()->syncRejectslist();
+$result = Mailer::instance()->sendRejectsReport();
+
+
 for Mandrill templates, we use 'handlebars' for dynamic content:
 
 https://mandrill.zendesk.com/hc/en-us/articles/205582537-Using-Handlebars-for-Dynamic-Content
