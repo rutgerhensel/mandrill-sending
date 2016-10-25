@@ -281,7 +281,9 @@ class Mailer extends Configurable
 		
 		$db_conn = $this->getDBConnection();
 		
-		if( ! $list = $db_conn->getRejectsList($from, $to))
+		$list = $db_conn->getRejectsList($from, $to);
+		
+		if( $list === false )
 		{
 			$this->errors[] = $db_conn->getLastError();
 			
@@ -588,14 +590,21 @@ class Mailer extends Configurable
 		#remove id
 		unset($fields[0]);
 		
-		$td_styles = 'border: 1px solid #ccc; padding:5px';
-		
-		$html = '<table style="border-collapse: collapse;border-spacing: 0;">';
-		$html .= '<tr><th style="'.$td_styles.'">' . implode('</th><th style="'.$td_styles.'">', $fields) . '</th></tr>';
-		
-		foreach($list as $row)
+		if(empty($list))
 		{
-			$html .= '<tr><td style="'.$td_styles.'">' . implode('</td><td style="'.$td_styles.'">', $row) . '</td></tr>';
+			$html = '<p>No new Rejects added to the list</p>';
+		}
+		else
+		{
+			$td_styles = 'border: 1px solid #ccc; padding:5px';
+			
+			$html = '<table style="border-collapse: collapse;border-spacing: 0;">';
+			$html .= '<tr><th style="'.$td_styles.'">' . implode('</th><th style="'.$td_styles.'">', $fields) . '</th></tr>';
+			
+			foreach($list as $row)
+			{
+				$html .= '<tr><td style="'.$td_styles.'">' . implode('</td><td style="'.$td_styles.'">', $row) . '</td></tr>';
+			}
 		}
 		
 		$html .= '</table>';

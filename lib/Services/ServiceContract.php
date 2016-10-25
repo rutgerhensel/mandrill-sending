@@ -11,4 +11,6 @@ Interface ServiceContract
 	public function send(Array $mail);
 	
 	public function fetchRejectslist();
+	
+	public function getLastError();
 }
