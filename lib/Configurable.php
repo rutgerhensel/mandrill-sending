@@ -43,8 +43,6 @@ class Configurable
 		
 		$configs[array_shift($keys)] = $value;
 		
-		echo '<pre>' . print_r($this->configs, true) . '</pre>';
-		
 		return $this;
 	}
 	
