@@ -312,6 +312,7 @@ class Mailer extends Configurable
 		$subject = "[Mailer] Rejects list from {$range}";
 		
 		return static::instance()
+			->setConfig('send_copy_to_sender', false)
 			->setSubject($subject)
 			->setRecipients($recipients)
 			->scheduleHtml($html);
