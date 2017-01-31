@@ -32,6 +32,7 @@ class Mailer extends Configurable implements ServiceContract
 			'from_email' => $mail['from_email'],
 			'to' => $mail['recipients'],
 			'attachments' => $mail['attachments'],
+			'headers' => $mail['headers']
 		);
 		
 		if($mail['type'] == 'template')

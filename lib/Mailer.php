@@ -13,6 +13,8 @@ class Mailer extends Configurable
 	
 	protected $attachments = array();
 	
+	protected $headers = array();
+	
 	protected $errors = array();
 	
 	public static $defaults = array();
@@ -127,6 +129,23 @@ class Mailer extends Configurable
 		return $this;
 	}
 	
+	public function addHeader($name, $value)
+	{
+		$this->headers[$name] = $value;
+		
+		return $this;
+	}
+	
+	public function addHeaders($headers)
+	{
+		foreach($headers as $key => $value)
+		{
+			$this->addHeader($key, $value);
+		}
+		
+		return $this;
+	}
+	
 	public function scheduleHtml($html)
 	{
 		if($this->getConfig('include_unsubscribe_link', false) === true)
@@ -175,6 +194,7 @@ class Mailer extends Configurable
 			'from_name' => $this->getConfig('from_name', ''),
 			'from_email' => $this->getConfig('from_email', ''),
 			'attachments' => $this->attachments,
+			'headers' => $this->headers,
 			'recipients' => $this->getRecipients()
 		));
 		
