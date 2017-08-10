@@ -115,7 +115,7 @@ class Mailer extends Configurable implements ServiceContract
 		{
 			$mandrill = new \Mandrill($this->getConfig('api_key'));
 			
-			$raw = $mandrill->rejects->getList(null, true, $this->getConfig('subaccount', null));
+			$raw = $mandrill->rejects->getList(null, false, $this->getConfig('subaccount', null));
 		}
 		catch(\Exception $e)
 		{
