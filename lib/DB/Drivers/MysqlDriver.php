@@ -270,9 +270,16 @@ class MysqlDriver extends Configurable implements DriverContract
 	{
 		$response = array('list_total' => count($list));
 		
+		$errors = array();
+		$adds = array();
+		$updates = array();
+		
 		# if we do not have anything to work with we bail
 		if(empty($list))
 		{
+			$response['errors'] = $errors;
+			$response['adds'] = $adds;
+			$response['updates'] = $updates;
 			return $response;
 		}
 		
