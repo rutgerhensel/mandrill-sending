@@ -274,7 +274,9 @@ class Mailer extends Configurable
 		$service = $this->getServiceInstance();
 		$db_conn = $this->getDBConnection();
 		
-		if( $rejects = $service->fetchRejectslist() )
+		$rejects = $service->fetchRejectslist();
+		
+		if( $rejects !== false )
 		{
 			return $db_conn->syncRejectslist($rejects);
 		}
