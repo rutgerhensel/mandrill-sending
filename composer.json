@@ -9,5 +9,8 @@
 		"psr-4": {
 			"Mailer\\": "lib/"
 		}
+	},
+	"config": {
+	  "preferred-install": "dist",
 	}
 }
