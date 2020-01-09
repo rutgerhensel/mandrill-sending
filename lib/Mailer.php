@@ -214,6 +214,7 @@ class Mailer extends Configurable
 		if( $entry = $db_conn->saveEntry($entry) )
 		{
 			$success = true;
+			$send_result = null;
 			if($send_now)
 			{
 				$send_result = $this->attemptSendingMail(array($entry));
@@ -224,6 +225,8 @@ class Mailer extends Configurable
 			$success = false;
 			
 			$this->errors[] = $db_conn->getLastError();
+			
+			$send_result = 'Error saving to database';
 		}
 		
 		$errors = $this->getErrors();
@@ -357,11 +360,21 @@ class Mailer extends Configurable
 			}
 			else
 			{
-				$updates['attempts'] = $mail['attempts'] + 1;
-				
-				if($updates['attempts'] == $this->getConfig('resend_attempts', 5))
+				/*
+					call fail vs error response.
+					
+					we want to keep attempting to send entries
+					if calls fails, if the call does not fail but
+					we get an error response, then we increase the attempt number
+				*/
+				if(! isset($send_result['http_error']) )
 				{
-					$this->sendFailedWarning($send_result, $mail);
+					$updates['attempts'] = $mail['attempts'] + 1;
+					
+					if($updates['attempts'] == $this->getConfig('resend_attempts', 5))
+					{
+						$this->sendFailedWarning($send_result, $mail);
+					}
 				}
 			}
 			

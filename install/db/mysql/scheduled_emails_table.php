@@ -2,8 +2,8 @@
 
 CREATE TABLE `scheduled_emails` (
   `id` int(10) unsigned NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `updated_at` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
   `attempted_at` timestamp NULL DEFAULT NULL,
   `sent_at` timestamp NULL DEFAULT NULL,
   `esp` varchar(64) COLLATE utf8_unicode_ci NOT NULL,

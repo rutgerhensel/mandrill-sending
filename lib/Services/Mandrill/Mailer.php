@@ -103,6 +103,11 @@ class Mailer extends Configurable implements ServiceContract
 		}
 		catch(\Exception $e)
 		{
+			if($e instanceof \Mandrill_HttpError)
+			{
+				$result['http_error'] = true;
+			}
+			
 			$result['response'] = $e->getMessage();
 		}
 		
