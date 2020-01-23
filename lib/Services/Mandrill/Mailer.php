@@ -64,7 +64,11 @@ class Mailer extends Configurable implements ServiceContract
 	
 	public function send(Array $mail)
 	{
-		$result = array('recipients' => $this->extractRecipients($mail), 'sent' => false);
+		$result = array(
+			'recipients'=> $this->extractRecipients($mail),
+			'sent'      => false,
+			'attempted' => true
+		);
 		
 		try
 		{
@@ -72,11 +76,11 @@ class Mailer extends Configurable implements ServiceContract
 			
 			if($mail['template_slug'])
 			{
-				$response = $mandrill->messages->sendTemplate($mail['template_slug'], array(), json_decode($mail['payload_json'], true));
+				$response = $mandrill->messages->sendTemplate($mail['template_slug'], array(), unserialize($mail['payload_json']));
 			}
 			else
 			{
-				$response = $mandrill->messages->send(json_decode($mail['payload_json'], true));
+				$response = $mandrill->messages->send(unserialize($mail['payload_json']));
 			}
 			
 			$result['response'] = $response;
@@ -103,12 +107,23 @@ class Mailer extends Configurable implements ServiceContract
 		}
 		catch(\Exception $e)
 		{
+			$result['response'] = $e->getMessage();
+			
+			/*
+				call fail vs error response:
+			*/
+			
+			# we want to keep attempting to send entries if calls fails
 			if($e instanceof \Mandrill_HttpError)
 			{
-				$result['http_error'] = true;
+				$result['attempted'] = false;
 			}
 			
-			$result['response'] = $e->getMessage();
+			# we want to keep attempting to send entries internal server error on Mandrill
+			if($e->getCode() >= 500 )
+			{
+				$result['attempted'] = false;
+			}
 		}
 		
 		return $result;
@@ -148,7 +163,7 @@ class Mailer extends Configurable implements ServiceContract
 	
 	private static function extractRecipients($mail)
 	{
-		$recipients = json_decode($mail['recipients_json'], true);
+		$recipients = unserialize($mail['recipients_json']);
 		
 		$emails = array();
 		foreach($recipients as $recipient)

@@ -54,8 +54,8 @@ class PdoDriver extends Configurable implements DriverContract
 			'esp'				=> $mail['esp'],
 			'template_slug' 	=> $mail['template'],
 			'subject'			=> $mail['subject'],
-			'recipients_json'	=> json_encode($mail['recipients']),
-			'payload_json'		=> json_encode($mail['payload']),
+			'recipients_json'	=> serialize($mail['recipients']),
+			'payload_json'		=> serialize($mail['payload']),
 			'attempts'		=> '0',
 		);
 		

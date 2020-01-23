@@ -361,13 +361,12 @@ class Mailer extends Configurable
 			else
 			{
 				/*
-					call fail vs error response.
-					
-					we want to keep attempting to send entries
-					if calls fails, if the call does not fail but
-					we get an error response, then we increase the attempt number
+					Attempt fails can have different reasons depending on the
+					service (service API connectivity issues, 500 return errors, etc.)
+					The service will let us know if we should count this as an actual
+					attempt.
 				*/
-				if(! isset($send_result['http_error']) )
+				if( $send_result['attempted'] )
 				{
 					$updates['attempts'] = $mail['attempts'] + 1;
 					
@@ -566,7 +565,7 @@ class Mailer extends Configurable
 	
 	private function sendFailedWarning($result, $mail)
 	{
-		$mail['payload'] = json_decode($mail['payload_json'], true);
+		$mail['payload'] = unserialize($mail['payload_json']);
 		
 		unset($mail['payload_json']);
 		
