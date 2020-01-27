@@ -68,7 +68,7 @@ class Mailer extends Configurable implements ServiceContract
 			foreach($mail['attachments'] as $attachment)
 			{
 				$mailer->addStringAttachment(
-					$attachment['content'],
+					base64_decode($attachment['content']),
 					$attachment['name'],
 					PHPMailer::ENCODING_BASE64,
 					$attachment['type']
