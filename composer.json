@@ -2,10 +2,12 @@
 	"name": "rutgerhensel/mandrill-sending",
 	"description": "Mandrill Mailer Package",
 	"require": {
-		"mandrill/mandrill": "1.0.*"
+		"mandrill/mandrill": "1.0.*",
+		"phpmailer/phpmailer": "^6.1",
+		"mustache/mustache": "^2.13"
 	},
 	"autoload":{
-		"exclude-from-classmap": ["lib/services/", "lib/DB/drivers/"],
+		"exclude-from-classmap": ["lib/Services/", "lib/DB/Drivers/"],
 		"psr-4": {
 			"Mailer\\": "lib/"
 		}

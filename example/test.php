@@ -5,8 +5,8 @@ require_once dirname(__FILE__) . '/../vendor/autoload.php';
 use Mailer\Mailer as Mailer;
 use Mailer\DB\DB as MailerDB;
 
-$configs = require(dirname(__FILE__) . '/../install/configs.php');
-$db = require(dirname(__FILE__) . '/../install/db_configs.php');
+$configs = require(dirname(__FILE__) . '/config/mailer.php');
+$db      = require(dirname(__FILE__) . '/config/db.php');
 
 Mailer::setDefaults($configs);
 MailerDB::setDefaults($db);
@@ -15,25 +15,35 @@ $recipients = array(
 	'name'	=> 'full name',
 	'first'	=> 'first name',
 	'last'	=> 'last name',
-	'email'	=> 'development@kneadle.com',
+	'email'	=> 'test@example.com',
 	'type'	=> 'to' // can be 'to','cc','bcc'
 );
 
-$array_of_vars = array();
 
-$html = '<h2>Hello There</2>';
+### HTML EXAMPLE ###
+$html = '<h2>Hello World!</h2>';
 
-$overrides = array('from_email' => 'noreply@example.com');
-
-$result = Mailer::instance()
+Mailer::instance()
 	->setSubject('Testing')
 	->setRecipients($recipients)
 	->addAttachment('attachment_name.txt', 'This is an attachment')
-	->scheduleTemplate('template', $array_of_vars);
+	->scheduleHtml($html);
 
 
+### TEMPLATE EXAMPLE ###
 
-//$result = Mailer::instance()->sendScheduled();
+$array_of_vars = array('var_1' => 'Hello World!');
+
+$template = 'email-template-slug';
+
+Mailer::instance()
+	->setSubject('Testing')
+	->setRecipients($recipients)
+	->addAttachment('attachment_name.txt', 'This is an attachment')
+	->scheduleTemplate($template, $array_of_vars);
 
 
-var_dump($result);
+$result = Mailer::instance()->sendScheduled();
+
+
+echo '<pre>' . print_r($result, true) . '</pre>';

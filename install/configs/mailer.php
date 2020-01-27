@@ -7,11 +7,11 @@ return array(
 	| Mailer service
 	|--------------------------------------------------------------------------
 	|
-	|can be 'madrill' (only one supported for now) or 'sengrid' (in the future)
+	|can be 'madrill' or 'phpmailer'
 	|
 	*/
 	
-	'service' => 'mandrill',
+	'service' => 'phpmailer',
 
 	/*
 	|--------------------------------------------------------------------------
@@ -61,9 +61,14 @@ return array(
 
 	'mandrill' => array(
 	
-		'api_key' => '',
+		'api_key' => 'xxxxxx',
 		
-	'subaccount' => 'SubAccount',
+		'subaccount' => 'SubAccount',
 	
+	),
+	
+	'phpmailer' => array(
+		
+		'templates_path' => '/path/to/templates/'
 	)
 );
